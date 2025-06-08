@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZappForm Options</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    
+    h1 {
+      color: #2563eb;
+      margin-top: 0;
+    }
+    
+    .card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    
+    h2 {
+      margin-top: 0;
+      font-size: 18px;
+    }
+    
+    .options-group {
+      margin-bottom: 16px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    
+    input[type="checkbox"] {
+      margin-right: 8px;
+    }
+    
+    button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    
+    .status {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 4px;
+    }
+    
+    .status-success {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+    
+    .status-error {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+    
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>ZappForm Options</h1>
+  
+  <div class="card">
+    <h2>Autofill Settings</h2>
+    
+    <div class="options-group">
+      <label>
+        <input type="checkbox" id="enable-autofill" checked>
+        Enable automatic form filling
+      </label>
+      <p>When enabled, ZappForm will automatically detect and fill forms on websites you visit.</p>
+    </div>
+    
+    <div class="options-group">
+      <label>
+        <input type="checkbox" id="show-notifications">
+        Show notifications when forms are filled
+      </label>
+    </div>
+    
+    <div class="options-group">
+      <label>
+        <input type="checkbox" id="highlight-fields">
+        Highlight filled fields
+      </label>
+      <p>Briefly highlight form fields after they're filled to make them more visible.</p>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Privacy Settings</h2>
+    
+    <div class="options-group">
+      <label>
+        <input type="checkbox" id="ask-before-filling">
+        Ask before filling forms on new websites
+      </label>
+      <p>When visiting a website for the first time, ask for permission before filling forms.</p>
+    </div>
+    
+    <div class="options-group">
+      <label>
+        <input type="checkbox" id="never-fill-passwords" checked>
+        Never fill password fields
+      </label>
+      <p>Password fields will always be skipped for security reasons.</p>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Connection Settings</h2>
+    <p>Manage your connection to ZappForm.</p>
+    
+    <div id="connection-status">
+      <div id="connected" class="hidden">
+        <p>Currently connected as <span id="user-email">user@example.com</span></p>
+        <button id="disconnect-button">Disconnect</button>
+      </div>
+      
+      <div id="disconnected" class="hidden">
+        <p>Not connected to ZappForm.</p>
+        <p>Please connect through the extension popup.</p>
+      </div>
+      
+      <div id="loading">
+        <p>Loading connection status...</p>
+      </div>
+    </div>
+  </div>
+  
+  <div>
+    <button id="save-button">Save Settings</button>
+    <div id="save-status" class="status hidden"></div>
+  </div>
+  
+  <script src="options.js"></script>
+</body>
+</html> 
