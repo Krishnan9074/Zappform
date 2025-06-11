@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { signIn, useSession } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 export default function LoginForm() {
@@ -11,6 +11,56 @@ export default function LoginForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { data: session, status } = useSession();
+  
+  const redirectUri = searchParams.get('redirect_uri');
+  const isExtensionLogin = redirectUri === 'chrome-extension';
+
+  // Handle successful authentication for extension
+  useEffect(() => {
+    if (isExtensionLogin && session?.user && status === 'authenticated') {
+      // For extension login, we need to provide a way to get the session token
+      // We'll create a hidden element with the session data
+      const tokenElement = document.createElement('div');
+      tokenElement.id = 'extension-auth-token';
+      tokenElement.style.display = 'none';
+      tokenElement.setAttribute('data-session', JSON.stringify({
+        user: session.user,
+        timestamp: Date.now()
+      }));
+      document.body.appendChild(tokenElement);
+      
+      // Show success message for extension
+      const successMsg = document.createElement('div');
+      successMsg.innerHTML = `
+        <div style="
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: white;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          text-align: center;
+          z-index: 1000;
+        ">
+          <h3 style="color: #10b981; margin-bottom: 10px;">✅ Authentication Successful!</h3>
+          <p style="margin-bottom: 15px;">You can now close this tab and return to the extension.</p>
+          <button onclick="window.close()" style="
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+          ">Close Tab</button>
+        </div>
+      `;
+      document.body.appendChild(successMsg);
+    }
+  }, [session, status, isExtensionLogin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,8 +79,11 @@ export default function LoginForm() {
         return;
       }
 
-      router.push('/dashboard');
-      router.refresh();
+      // For extension login, don't redirect to dashboard
+      if (!isExtensionLogin) {
+        router.push('/dashboard');
+        router.refresh();
+      }
     } catch (error) {
       setError('Something went wrong. Please try again.');
       console.error(error);
@@ -40,15 +93,19 @@ export default function LoginForm() {
   };
 
   const handleGoogleSignIn = () => {
-    signIn('google', { callbackUrl: '/dashboard' });
+    const callbackUrl = isExtensionLogin ? '/auth/signin?redirect_uri=chrome-extension' : '/dashboard';
+    signIn('google', { callbackUrl });
   };
 
   return (
     <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow-md">
       <div className="text-center">
-        <h1 className="text-2xl font-bold">Sign in to ZappForm</h1>
+        <h1 className="text-2xl font-bold">Sign in to Synergetics ZappForm</h1>
         <p className="mt-2 text-gray-600">
-          Fill forms instantly with AI-powered autofill
+          {isExtensionLogin 
+            ? 'Connect your account to the browser extension'
+            : 'Fill forms instantly with AI-powered autofill'
+          }
         </p>
       </div>
       
@@ -148,14 +205,16 @@ export default function LoginForm() {
         </div>
       </div>
       
-      <div className="text-center mt-6">
-        <p className="text-sm text-gray-600">
-          Don&apos;t have an account?{' '}
-          <Link href="/auth/register" className="text-blue-600 hover:text-blue-500">
-            Sign up
-          </Link>
-        </p>
-      </div>
+      {!isExtensionLogin && (
+        <div className="text-center mt-6">
+          <p className="text-sm text-gray-600">
+            Don&apos;t have an account?{' '}
+            <Link href="/auth/register" className="text-blue-600 hover:text-blue-500">
+              Sign up
+            </Link>
+          </p>
+        </div>
+      )}
     </div>
   );
 } 

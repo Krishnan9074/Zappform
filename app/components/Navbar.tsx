@@ -31,7 +31,7 @@ export default async function Navbar() {
       <div className="container mx-auto px-6 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <Link href="/" className="flex items-center">
+                  <Link href="/" className="flex items-center">
               <Image
                 src="/logo.png"
                 alt="Synergetics ZappForm Logo"
@@ -42,34 +42,34 @@ export default async function Navbar() {
               <span className="ml-3 text-xl font-bold text-gray-900 dark:text-white">
                 Synergetics ZappForm
               </span>
-            </Link>
-          </div>
+                  </Link>
+                </div>
           <div className="hidden items-center space-x-8 md:flex">
             {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
+                        <Link
+                          key={item.name}
+                          href={item.href}
                 className="rounded-md px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-              >
-                {item.name}
-              </Link>
+                        >
+                          {item.name}
+                        </Link>
             ))}
-          </div>
+                  </div>
           <div className="flex items-center space-x-4">
             <ThemeSwitcher />
             {session?.user ? (
               <UserMenu session={session} />
             ) : (
-              <Link
-                href="/auth/signin"
+                    <Link
+                      href="/auth/signin"
                 className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-              >
+                    >
                 Sign In
-              </Link>
-            )}
+                            </Link>
+                          )}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
     </nav>
   );
 } 

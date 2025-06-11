@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Synergetics ZappForm Auth</title>
+  </head>
+  <body>
+    <p>Authenticating...</p>
+    <script>
+      // Parse token from URL hash (e.g. #token=...)
+      const token = new URLSearchParams(window.location.hash.substring(1)).get('token');
+      if (token) {
+        chrome.storage.local.set({ authToken: token }, () => {
+          window.close();
+        });
+      } else {
+        document.body.innerHTML = '<p>Authentication failed. No token found.</p>';
+      }
+    </script>
+  </body>
+</html> 

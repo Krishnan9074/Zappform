@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { prisma } from '@/app/lib/prisma';
+import prisma from '@/app/lib/prisma';
 import { Prisma } from '@prisma/client';
 
 export async function GET() {
@@ -20,10 +20,7 @@ export async function GET() {
         documents: {
           orderBy: { createdAt: 'desc' }
         },
-        aiPersona: {
-          orderBy: { updatedAt: 'desc' },
-          take: 1
-        }
+        aiPersona: true
       }
     });
     

@@ -1,296 +1,279 @@
-// Popup script for ZappForm extension
+// Synergetics ZappForm - Popup Script
 
-// DOM elements
-const loadingView = document.getElementById('loading');
-const loginView = document.getElementById('login-view');
-const dashboardView = document.getElementById('dashboard-view');
-const loginButton = document.getElementById('loginButton');
-const logoutButton = document.getElementById('logoutButton');
-const refreshButton = document.getElementById('refresh-button');
-const userInfoElement = document.getElementById('userInfo');
-const statusElement = document.getElementById('status');
-const toggleButton = document.getElementById('toggleButton');
-const manualFillButton = document.getElementById('manualFillButton');
-const formInfoElement = document.getElementById('formInfo');
+document.addEventListener('DOMContentLoaded', main);
 
-// Initialize popup
-function init() {
-  // Check user authentication status
-  checkAuthStatus();
+let state = {
+  isAuthenticated: false,
+  isLoading: true,
+  userProfile: null,
+  error: null
+};
+
+function main() {
+  render();
+  checkAuth();
+  setupEventListeners();
+}
+
+function setupEventListeners() {
+  // Footer links
+  document.getElementById('options-link')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.runtime.openOptionsPage();
+  });
   
-  // Set up event listeners
-  logoutButton.addEventListener('click', handleLogout);
-  refreshButton.addEventListener('click', checkAuthStatusWithServer);
-  
-  // Listen for messages from any page (including the web app)
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === 'AUTH_TOKEN_FROM_WEBAPP') {
-      if (message.data && message.data.user) {
-        // Handle user data sent from the web app
-        handleUserDataFromWebApp(message.data.user);
-        sendResponse({ success: true });
-      }
-    }
-    return true;
+  document.getElementById('help-link')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: 'https://synergetics-zappform.com/help' });
   });
 }
 
-// Check authentication status from storage
-function checkAuthStatus() {
-  // Show loading state
-  loadingView.classList.remove('hidden');
-  loginView.classList.add('hidden');
-  dashboardView.classList.add('hidden');
-  
-  // Check if user is already authenticated
-  chrome.runtime.sendMessage({ type: 'GET_USER_DATA' }, (response) => {
-    if (response && response.authenticated) {
-      showDashboard(response.userData);
-    } else {
-      showLogin();
-    }
-  });
+function setState(newState) {
+  state = { ...state, ...newState };
+  render();
 }
 
-// Check authentication status with server
-function checkAuthStatusWithServer() {
-  // Show loading state
-  loadingView.classList.remove('hidden');
-  loginView.classList.add('hidden');
-  dashboardView.classList.add('hidden');
+function render() {
+  const root = document.getElementById('root');
+  if (!root) return;
   
-  // Check with server
-  chrome.runtime.sendMessage({ type: 'CHECK_AUTH_WITH_SERVER' }, (response) => {
-    if (response && response.authenticated) {
-      showDashboard(response.userData);
-    } else {
-      showLogin();
-    }
-  });
-}
-
-// Show login view
-function showLogin() {
-  loadingView.classList.add('hidden');
-  loginView.classList.remove('hidden');
-  dashboardView.classList.add('hidden');
-}
-
-// Show dashboard view
-function showDashboard(userData) {
-  loadingView.classList.add('hidden');
-  loginView.classList.add('hidden');
-  dashboardView.classList.remove('hidden');
-  
-  if (userData && userData.name) {
-    userInfoElement.textContent = `Welcome back, ${userData.name}!`;
-  }
-}
-
-// Handle user data from web app
-function handleUserDataFromWebApp(user) {
-  chrome.runtime.sendMessage({
-    type: 'LOGIN',
-    data: {
-      user: user
-    }
-  }, (response) => {
-    if (response && response.success) {
-      showDashboard(user);
-    }
-  });
-}
-
-// Handle logout button click
-function handleLogout() {
-  // Show loading state
-  loadingView.classList.remove('hidden');
-  loginView.classList.add('hidden');
-  dashboardView.classList.add('hidden');
-  
-  chrome.runtime.sendMessage({ type: 'LOGOUT' }, (response) => {
-    if (response && response.success) {
-      showLogin();
-    } else {
-      // If logout failed, show dashboard again
-      checkAuthStatus();
-    }
-  });
-}
-
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', init);
-
-document.addEventListener('DOMContentLoaded', function() {
-  // Initialize popup state
-  initializePopup();
-  
-  // Button event listeners
-  toggleButton.addEventListener('click', toggleExtension);
-  loginButton.addEventListener('click', openLoginPage);
-  logoutButton.addEventListener('click', logout);
-  
-  if (manualFillButton) {
-    manualFillButton.addEventListener('click', triggerManualFill);
+  if (state.isLoading) {
+    root.innerHTML = `<div class='loading'>Loading...</div>`;
+    return;
   }
   
-  // Initialize popup with current state
-  function initializePopup() {
-    chrome.storage.local.get(['isActive', 'lastDetectedForms', 'userProfile'], function(result) {
-      // Update toggle button state
-      updateToggleButton(result.isActive);
-      
-      // Check if user is logged in
-      checkAuthentication();
-      
-      // Display form info if available
-      if (result.lastDetectedForms) {
-        displayFormInfo(result.lastDetectedForms);
-      } else {
-        formInfoElement.textContent = 'No forms detected on this page.';
-        if (manualFillButton) {
-          manualFillButton.style.display = 'none';
-        }
-      }
-      
-      // Display user info if available
-      if (result.userProfile) {
-        displayUserInfo(result.userProfile);
-      }
-    });
-  }
-  
-  // Check user authentication status
-  function checkAuthentication() {
-    chrome.runtime.sendMessage({ type: 'CHECK_AUTH' }, function(response) {
-      if (response && response.authenticated) {
-        // User is authenticated
-        loginButton.style.display = 'none';
-        logoutButton.style.display = 'block';
-        if (response.userProfile) {
-          displayUserInfo(response.userProfile);
-        }
-      } else {
-        // User is not authenticated
-        loginButton.style.display = 'block';
-        logoutButton.style.display = 'none';
-        userInfoElement.innerHTML = '<p>Sign in to use ZappForm</p>';
-      }
-    });
-  }
-  
-  // Toggle extension on/off
-  function toggleExtension() {
-    chrome.storage.local.get(['isActive'], function(result) {
-      const newState = !result.isActive;
-      
-      chrome.storage.local.set({ isActive: newState }, function() {
-        updateToggleButton(newState);
-        
-        // Notify content script of state change
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-          if (tabs[0]) {
-            chrome.tabs.sendMessage(tabs[0].id, {
-              type: 'TOGGLE_EXTENSION',
-              data: { isActive: newState }
-            });
-          }
-        });
-      });
-    });
-  }
-  
-  // Update toggle button appearance
-  function updateToggleButton(isActive) {
-    if (isActive) {
-      toggleButton.textContent = 'Turn Off';
-      toggleButton.classList.remove('btn-primary');
-      toggleButton.classList.add('btn-danger');
-      statusElement.textContent = 'ZappForm is active';
-      statusElement.className = 'status-active';
-    } else {
-      toggleButton.textContent = 'Turn On';
-      toggleButton.classList.remove('btn-danger');
-      toggleButton.classList.add('btn-primary');
-      statusElement.textContent = 'ZappForm is inactive';
-      statusElement.className = 'status-inactive';
-    }
-  }
-  
-  // Open login page
-  function openLoginPage() {
-    chrome.tabs.create({ url: 'http://localhost:3000/login' });
-  }
-  
-  // Logout
-  function logout() {
-    chrome.runtime.sendMessage({ type: 'LOGOUT' }, function() {
-      loginButton.style.display = 'block';
-      logoutButton.style.display = 'none';
-      userInfoElement.innerHTML = '<p>Sign in to use ZappForm</p>';
-    });
-  }
-  
-  // Display detected form information
-  function displayFormInfo(formData) {
-    if (!formData || !formData.forms || formData.forms.length === 0) {
-      formInfoElement.textContent = 'No forms detected on this page.';
-      if (manualFillButton) {
-        manualFillButton.style.display = 'none';
-      }
-      return;
-    }
-    
-    const isGoogleForm = formData.domain && formData.domain.includes('docs.google.com');
-    
-    if (isGoogleForm) {
-      formInfoElement.innerHTML = '<strong>Google Form detected!</strong>';
-    } else {
-      formInfoElement.innerHTML = `<strong>${formData.forms.length} form(s) detected on:</strong><br>` +
-                                  `<span class="domain">${formData.domain || 'Unknown domain'}</span>`;
-    }
-    
-    // Show manual fill button
-    if (manualFillButton) {
-      manualFillButton.style.display = 'block';
-    }
-  }
-  
-  // Display user information
-  function displayUserInfo(userProfile) {
-    if (!userProfile || !userProfile.name) {
-      userInfoElement.innerHTML = '<p>User information not available</p>';
-      return;
-    }
-    
-    userInfoElement.innerHTML = `
-      <div class="user-profile">
-        <p><strong>${userProfile.name}</strong></p>
-        <p class="email">${userProfile.email || ''}</p>
+  if (state.error) {
+    root.innerHTML = `
+      <div class='content'>
+        <div class='error'>${state.error}</div>
+        <button class='login-button' id='login-btn'>
+          <svg class='icon' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1' />
+          </svg>
+          Login with Synergetics
+        </button>
       </div>
     `;
+    document.getElementById('login-btn')?.addEventListener('click', login);
+    return;
   }
   
-  // Trigger manual form fill
-  function triggerManualFill() {
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      if (tabs[0]) {
-        chrome.runtime.sendMessage({
-          type: 'MANUAL_FILL',
-          data: { tabId: tabs[0].id }
+  if (!state.isAuthenticated) {
+    root.innerHTML = `
+      <div class='login-section'>
+        <div class='login-title'>Welcome to ZappForm</div>
+        <div class='login-description'>
+          Connect your account to start automatically filling forms across the web with AI-powered intelligence.
+        </div>
+        <button class='login-button' id='login-btn'>
+          <svg class='icon' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1' />
+          </svg>
+          Login with Synergetics
+        </button>
+      </div>
+    `;
+    document.getElementById('login-btn')?.addEventListener('click', login);
+    return;
+  }
+  
+  // Authenticated dashboard
+  root.innerHTML = `
+    <div class='content'>
+      <div class='profile'>
+        <div class='welcome-text'>
+          <span class='status-indicator status-connected'></span>
+          Welcome back!
+        </div>
+        <div class='user-email'>${state.userProfile?.email || 'User'}</div>
+        <button class='action-button secondary-button' id='logout-btn'>
+          <svg class='icon' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1' />
+          </svg>
+          Logout
+        </button>
+      </div>
+      
+      <div class='actions'>
+        <button class='action-button primary-button' id='fill-btn'>
+          <svg class='icon' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' />
+          </svg>
+          Fill Form (Direct)
+        </button>
+        
+        <button class='action-button primary-button' id='ai-btn'>
+          <svg class='icon' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z' />
+          </svg>
+          AI Agent Fill
+        </button>
+      </div>
+    </div>
+  `;
+  
+  // Add event listeners for authenticated state
+  document.getElementById('logout-btn')?.addEventListener('click', logout);
+  document.getElementById('fill-btn')?.addEventListener('click', () => fillForm(false));
+  document.getElementById('ai-btn')?.addEventListener('click', () => fillForm(true));
+}
+
+function checkAuth() {
+  setState({ isLoading: true });
+  
+  // Check authentication with the extension auth endpoint
+  fetch('http://localhost:3000/api/extension/auth', {
+    method: 'GET',
+    credentials: 'include', // Include cookies for session
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success && data.user) {
+      setState({ 
+        isAuthenticated: true, 
+        userProfile: data.user, 
+        isLoading: false 
+      });
+      } else {
+      setState({ isAuthenticated: false, isLoading: false });
+    }
+  })
+  .catch(error => {
+    console.error('Auth check failed:', error);
+    setState({ isAuthenticated: false, isLoading: false });
+  });
+}
+
+function login() {
+  setState({ isLoading: true });
+  
+  // Open login page in new tab with extension redirect
+  const loginUrl = 'http://localhost:3000/auth/signin?redirect_uri=chrome-extension';
+  chrome.tabs.create({ url: loginUrl });
+  
+  // Poll for authentication changes by checking the auth endpoint
+  const pollInterval = setInterval(() => {
+    fetch('http://localhost:3000/api/extension/auth', {
+      method: 'GET',
+      credentials: 'include',
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && data.user) {
+        clearInterval(pollInterval);
+        setState({ 
+          isAuthenticated: true, 
+          userProfile: data.user, 
+          isLoading: false 
         });
+      }
+    })
+    .catch(error => {
+      console.error('Auth poll failed:', error);
+    });
+  }, 2000);
+  
+  // Stop polling after 5 minutes
+  setTimeout(() => {
+    clearInterval(pollInterval);
+    setState({ isLoading: false });
+  }, 300000);
+}
+
+function logout() {
+  setState({ isLoading: true });
+  
+  // Call logout endpoint
+  fetch('http://localhost:3000/api/auth/signout', {
+    method: 'POST',
+    credentials: 'include',
+  })
+  .then(() => {
+    setState({ 
+      isAuthenticated: false, 
+      userProfile: null, 
+      isLoading: false 
+    });
+  })
+  .catch(error => {
+    console.error('Logout failed:', error);
+    setState({ 
+      isAuthenticated: false, 
+      userProfile: null, 
+      isLoading: false 
+    });
+  });
+}
+
+function fillForm(useAI) {
+  setState({ isLoading: true });
+  
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs[0];
+    if (!tab) {
+      setState({ isLoading: false, error: 'No active tab found' });
+      return;
+    }
+    
+    // Show loading message
+    const root = document.getElementById('root');
+    if (root) {
+      const loadingMsg = document.createElement('div');
+      loadingMsg.className = 'loading-message';
+      loadingMsg.style.cssText = `
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 8px;
+        padding: 16px;
+        margin: 16px 0;
+        text-align: center;
+        font-size: 14px;
+        color: #3b82f6;
+      `;
+      loadingMsg.textContent = useAI ? 'AI Agent is analyzing the form...' : 'Filling form fields...';
+      root.appendChild(loadingMsg);
+    }
+    
+    chrome.runtime.sendMessage({ 
+      type: 'FILL_FORM_REQUEST', 
+      useAI,
+      tabId: tab.id 
+    }, (response) => {
+      console.log('Popup received response from background:', response);
+      setState({ isLoading: false });
+      
+      // Remove loading message
+      const loadingMsg = document.querySelector('.loading-message');
+      if (loadingMsg) {
+        loadingMsg.remove();
+      }
+      
+      if (response?.success) {
+        // Show success feedback
+        const successMsg = document.createElement('div');
+        successMsg.className = 'success-message';
+        successMsg.style.cssText = `
+          background: rgba(16, 185, 129, 0.2);
+          border: 1px solid rgba(16, 185, 129, 0.3);
+          border-radius: 8px;
+          padding: 16px;
+          margin: 16px 0;
+          text-align: center;
+          font-size: 14px;
+          color: #10b981;
+        `;
+        successMsg.textContent = useAI ? 'AI Agent completed form filling!' : 'Form filled successfully!';
+        root.appendChild(successMsg);
         
-        // Show loading state
-        manualFillButton.textContent = 'Filling...';
-        manualFillButton.disabled = true;
-        
-        // Reset button after 2 seconds
         setTimeout(() => {
-          manualFillButton.textContent = 'Fill Form';
-          manualFillButton.disabled = false;
-          window.close(); // Close the popup
-        }, 2000);
+          successMsg.remove();
+        }, 3000);
+      } else {
+        setState({ 
+          isLoading: false, 
+          error: response?.error || 'Failed to fill form. Please try again.' 
+        });
       }
     });
-  }
-}); 
+  });
+} 
